@@ -5,7 +5,7 @@ pull requests. It explains 1–3 concepts, techniques, patterns, or libraries,
 grounding the lesson in the PR description, commit subjects, and diff.
 Each lesson quotes short verbatim snippets and links them to the PR diff.
 Matched snippets point to precise lines; otherwise the link opens the file.
-This is a learning companion, not an approval or defect-finding review.
+Use it to build a shared understanding of the changes.
 
 ## What a lesson looks like
 
@@ -189,3 +189,7 @@ do not establish that the external integrations work.
 pnpm wrangler tail literate-reviews-webhook
 pnpm wrangler tail literate-reviews-worker
 ```
+
+## License
+
+[MIT](LICENSE). Third-party dependencies retain their own licenses.
