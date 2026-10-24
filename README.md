@@ -59,8 +59,6 @@ sequenceDiagram
     CW->>GH: Post teaching comment
     CW->>Q: Acknowledge message
 
-    Note over CW,AI: Optional LangSmith tracing
-    Note over Q,CW: Failed processing retries up to 3 times
 ```
 
 ## Install and validate
