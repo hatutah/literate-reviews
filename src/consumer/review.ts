@@ -13,6 +13,7 @@ export async function runReview({
   graph: {
     invoke: (
       s: { diff: string; title: string; body: string; commits: string },
+      config?: { runName?: string; metadata?: Record<string, unknown> },
     ) => Promise<{ review: string }>;
   };
 }) {
@@ -40,6 +41,14 @@ export async function runReview({
   const rawDiff = diff.data as unknown as string;
   const { review } = await graph.invoke(
     { diff: rawDiff, title: job.title, body: job.body, commits },
+    {
+      runName: `${job.owner}/${job.repo}#${job.pull_number}`,
+      metadata: {
+        owner: job.owner,
+        repo: job.repo,
+        pull_number: job.pull_number,
+      },
+    },
   );
 
   const body = await linkifyReview(review, rawDiff, job.owner, job.repo, job.pull_number);

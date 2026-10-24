@@ -16,9 +16,20 @@ rules = [
 workers_dev = false
 preview_urls = false
 
-# Replace with the ID of your registered GitHub App before manual deployment.
+# Replace YOUR_GITHUB_APP_ID with your registered App ID before manual deployment.
+# GITHUB_APP_ID is not a secret — GitHub stamps it on every webhook and
+# it's public on the App's settings page. Kept here for portability.
+#
+# LangSmith config: everything except the API key ships in the clear.
+# LANGCHAIN_CALLBACKS_BACKGROUND=false makes tracer callbacks await
+# inline so the Worker doesn't tear down before traces flush — the
+# usual serverless-tracing gotcha.
 [vars]
 GITHUB_APP_ID = "YOUR_GITHUB_APP_ID"
+LANGSMITH_TRACING = "true"
+LANGSMITH_ENDPOINT = "https://api.smith.langchain.com"
+LANGSMITH_PROJECT = "literate-reviews"
+LANGCHAIN_CALLBACKS_BACKGROUND = "false"
 
 [[queues.consumers]]
 queue = "literate-reviews"
