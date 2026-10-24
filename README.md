@@ -37,6 +37,32 @@ Two Cloudflare Workers communicate through the `literate-reviews` queue:
   messages retry through the queue (3 retries, batch size 10, concurrency 4).
   It has no public HTTP endpoint.
 
+```mermaid
+sequenceDiagram
+    participant GH as GitHub
+    participant WH as Webhook Worker
+    participant Q as Queue
+    participant CW as Consumer Worker
+    participant AI as Anthropic
+
+    GH->>WH: Pull request webhook
+    WH->>WH: Verify HMAC and filter event
+    WH->>Q: Enqueue ReviewJob
+    WH-->>GH: 200 queued
+
+    Q->>CW: Deliver job
+    CW->>GH: Fetch PR diff and commit subjects
+    GH-->>CW: PR context
+    CW->>AI: Generate lesson through LangGraph
+    AI-->>CW: Teaching explanation
+    CW->>CW: Link snippets to diff lines
+    CW->>GH: Post teaching comment
+    CW->>Q: Acknowledge message
+
+    Note over CW,AI: Optional LangSmith tracing
+    Note over Q,CW: Failed processing retries up to 3 times
+```
+
 ## Install and validate
 
 ```sh
