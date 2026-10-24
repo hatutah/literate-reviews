@@ -1,0 +1,8 @@
+name = "literate-reviews-webhook"
+main = "src/receiver/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[queues.producers]]
+binding = "REVIEWS"
+queue = "literate-reviews"
