@@ -3,6 +3,7 @@
 // `./index.ts` wraps this with the queue handler.
 
 import type { ReviewJob } from "../shared/jobs";
+import { linkifyReview } from "./linkify";
 
 export async function runReview({
   octokit, job, graph,
@@ -41,10 +42,12 @@ export async function runReview({
     { diff: rawDiff, title: job.title, body: job.body, commits },
   );
 
+  const body = await linkifyReview(review, rawDiff, job.owner, job.repo, job.pull_number);
+
   await octokit.rest.issues.createComment({
     owner: job.owner,
     repo: job.repo,
     issue_number: job.pull_number,
-    body: review,
+    body,
   });
 }
