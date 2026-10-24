@@ -13,6 +13,7 @@ export type DiffLine = {
   content: string;
   newLine: number;
   oldLine: number;
+  hunk: number;
 };
 
 // Walks a unified diff and returns each changed file's hunk lines
@@ -22,6 +23,7 @@ export function parseDiff(diff: string): Map<string, DiffLine[]> {
   let currentPath: string | null = null;
   let newLine = 0;
   let oldLine = 0;
+  let hunk = 0;
 
   for (const line of diff.split("\n")) {
     if (line.startsWith("+++ b/")) {
@@ -33,6 +35,7 @@ export function parseDiff(diff: string): Map<string, DiffLine[]> {
     if (line.startsWith("@@")) {
       const m = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
       if (m) {
+        hunk++;
         oldLine = parseInt(m[1], 10);
         newLine = parseInt(m[2], 10);
       }
@@ -41,13 +44,13 @@ export function parseDiff(diff: string): Map<string, DiffLine[]> {
     if (!currentPath) continue;
     const bucket = files.get(currentPath)!;
     if (line.startsWith("+")) {
-      bucket.push({ sign: "+", content: line.slice(1), newLine, oldLine: 0 });
+      bucket.push({ sign: "+", content: line.slice(1), newLine, oldLine: 0, hunk });
       newLine++;
     } else if (line.startsWith("-")) {
-      bucket.push({ sign: "-", content: line.slice(1), newLine: 0, oldLine });
+      bucket.push({ sign: "-", content: line.slice(1), newLine: 0, oldLine, hunk });
       oldLine++;
     } else if (line.startsWith(" ")) {
-      bucket.push({ sign: " ", content: line.slice(1), newLine, oldLine });
+      bucket.push({ sign: " ", content: line.slice(1), newLine, oldLine, hunk });
       newLine++;
       oldLine++;
     }
@@ -77,7 +80,10 @@ export function findSnippetLocation(
   for (let i = 0; i <= fileLines.length - snippetLines.length; i++) {
     let match = true;
     for (let j = 0; j < snippetLines.length; j++) {
-      if (fileLines[i + j].content !== snippetLines[j]) {
+      if (
+        fileLines[i + j].hunk !== fileLines[i].hunk ||
+        fileLines[i + j].content !== snippetLines[j]
+      ) {
         match = false;
         break;
       }
