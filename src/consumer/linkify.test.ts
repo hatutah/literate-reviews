@@ -65,6 +65,30 @@ describe("linkifyReview", () => {
     expect(out).not.toContain(`#diff-${consumerHash}R`);
   });
 
+  it.each([
+    { name: "falls back for a snippet spanning separate hunks", snippet: "first\nsecond", anchor: "" },
+    { name: "links a snippet contained in a later hunk", snippet: "second\nthird", anchor: "R100" },
+  ])("$name", async ({ snippet, anchor }) => {
+    const diff = [
+      "diff --git a/src/consumer.ts b/src/consumer.ts",
+      "--- a/src/consumer.ts",
+      "+++ b/src/consumer.ts",
+      "@@ -1,1 +1,1 @@",
+      " first",
+      "@@ -100,2 +100,2 @@",
+      " second",
+      " third",
+    ].join("\n");
+    const review = `From \`src/consumer.ts\`:\n\n\`\`\`ts\n${snippet}\n\`\`\``;
+
+    const out = await linkifyReview(review, diff, "hatutah", "literate-reviews", 7);
+
+    expect(out).toContain(
+      `From [\`src/consumer.ts\`](https://github.com/hatutah/literate-reviews/pull/7/files#diff-${consumerHash}${anchor}):`,
+    );
+    expect(out).toContain(`\`\`\`ts\n${snippet}\n\`\`\``);
+  });
+
   it("falls back to file-level anchor when no fenced code block follows the heading", async () => {
     const diff = "";
     const review = "From `src/consumer.ts`:\n\nsome prose but no code fence.";
