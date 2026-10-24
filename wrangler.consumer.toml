@@ -26,7 +26,7 @@ preview_urls = false
 # usual serverless-tracing gotcha.
 [vars]
 GITHUB_APP_ID = "YOUR_GITHUB_APP_ID"
-LANGSMITH_TRACING = "true"
+LANGSMITH_TRACING = "false"
 LANGSMITH_ENDPOINT = "https://api.smith.langchain.com"
 LANGSMITH_PROJECT = "literate-reviews"
 LANGCHAIN_CALLBACKS_BACKGROUND = "false"

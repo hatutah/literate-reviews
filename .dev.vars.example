@@ -1,0 +1,15 @@
+# Copy to .dev.vars and replace placeholders. Never commit the real file.
+# Both local Workers read this file; deployed secrets are scoped per Worker.
+
+# Receiver
+GITHUB_WEBHOOK_SECRET="replace-with-a-random-local-webhook-secret"
+
+# Consumer
+GITHUB_APP_ID="replace-with-your-app-id"
+# Replace with the complete PKCS#8 PEM inside quotes, preserving real newlines.
+GITHUB_PRIVATE_KEY="replace-with-your-multiline-PKCS8-private-key"
+ANTHROPIC_API_KEY="replace-with-your-anthropic-api-key"
+
+# Optional tracing: enable only after reviewing what data is recorded.
+LANGSMITH_TRACING="false"
+LANGSMITH_API_KEY=""

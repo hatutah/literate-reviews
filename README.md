@@ -3,8 +3,29 @@
 A GitHub App that posts a short teaching comment on opened and synchronized
 pull requests. It explains 1–3 concepts, techniques, patterns, or libraries,
 grounding the lesson in the PR description, commit subjects, and diff.
-The current prompt requires short verbatim snippets; their headings link to
-precise diff lines when matched, with file-level fallbacks.
+Each lesson quotes short verbatim snippets and links them to the PR diff.
+Matched snippets point to precise lines; otherwise the link opens the file.
+Use it to build a shared understanding of the changes.
+
+## What a lesson looks like
+
+An illustrative excerpt for a PR adding webhook verification (actual wording varies):
+
+> ### 1. Authenticate the webhook with HMAC
+>
+> HMAC lets you check that the request body was signed with your shared webhook
+> secret. Verifying the raw body before parsing it matters: even a whitespace
+> change produces a different signature.
+>
+> From `src/receiver/webhook.ts`:
+>
+> ```ts
+> if (!(await verifyHmac(secret, body, sig))) {
+>   return { status: 401, body: "bad signature" };
+> }
+> ```
+
+## How it works
 
 Two Cloudflare Workers communicate through the `literate-reviews` queue:
 
@@ -15,13 +36,6 @@ Two Cloudflare Workers communicate through the `literate-reviews` queue:
   single-node LangGraph with `claude-sonnet-4-5`, and posts a comment. Failed
   messages retry through the queue (3 retries, batch size 10, concurrency 4).
   It has no public HTTP endpoint.
-
-Recreated from private `hatutah/abstractloom` snapshot
-`d09f89f4d5bb02b076288cbdcbb686f117db3a4e`, using fresh history.
-Runtime behavior, teaching prompt, dependencies, and tool pins are preserved.
-Project/Worker/queue/tracing names are changed; personal setup values are
-placeholders, and personal secret-manager automation is replaced by the manual
-setup below. CI validates only and never deploys infrastructure.
 
 ## Install and validate
 
@@ -37,6 +51,32 @@ Node `24.20.0` and pnpm `11.24.0` are pinned in `.tool-versions`.
 Use pnpm and commit `pnpm-lock.yaml`. `pnpm build` runs both Workers through
 Wrangler with `--dry-run`; it does not upload or provision anything.
 Tests inject a fake model and GitHub client and require no credentials.
+
+## Local configuration
+
+For Worker development, copy the placeholder template:
+
+```sh
+cp .dev.vars.example .dev.vars
+```
+
+Fill in your local webhook secret, GitHub App ID, PKCS#8 private key, and Anthropic
+key. The template is safe to commit; `.dev.vars`, `.env*`, and private key files
+are ignored. Both Worker configurations are in the repository root, so both
+local Workers load the same `.dev.vars` file. Production secrets are scoped
+separately as described below.
+
+For the private key, replace the entire placeholder value with a quoted,
+multiline PEM. Keep the `BEGIN PRIVATE KEY` and `END PRIVATE KEY` lines and the
+real newlines between them. See the conversion instructions below.
+
+Use `.dev.vars` for this setup. Wrangler also supports `.env`, but ignores it
+when `.dev.vars` is present. See the
+[Wrangler local environment guide](https://developers.cloudflare.com/workers/local-development/environment-variables/).
+
+Run `pnpm dev:receiver` or `pnpm dev:consumer` to develop the corresponding
+Worker locally. These are real integration entrypoints: GitHub and model calls
+use the credentials you provide. Unit tests require no secrets.
 
 ## Register and install your GitHub App
 
@@ -89,7 +129,6 @@ Enter your own credentials interactively and pipe the converted PEM via stdin:
 pnpm wrangler secret put GITHUB_WEBHOOK_SECRET -c wrangler.receiver.toml
 pnpm wrangler secret put GITHUB_PRIVATE_KEY -c wrangler.consumer.toml < /tmp/literate-reviews-pkcs8.pem
 pnpm wrangler secret put ANTHROPIC_API_KEY -c wrangler.consumer.toml
-pnpm wrangler secret put LANGSMITH_API_KEY -c wrangler.consumer.toml
 rm /tmp/literate-reviews-pkcs8.pem
 ```
 
@@ -97,12 +136,29 @@ Secrets are scoped per Worker. Do not commit keys, API tokens, `.dev.vars`,
 or other local secret files. No credentials or personal secret-manager paths
 are supplied by this repository.
 
-LangSmith configuration lives in `wrangler.consumer.toml`: project
-`literate-reviews`, tracing enabled, and endpoint `https://api.smith.langchain.com`.
-Set your own `LANGSMITH_API_KEY` before deploying with tracing enabled.
-`LANGCHAIN_CALLBACKS_BACKGROUND=false` lets traces flush inline before the
-Worker invocation ends. Trace runs and failure logs identify `owner/repo#PR`;
-trace metadata includes the owner, repository, and pull request number.
+## Data handling and optional tracing
+
+The consumer sends the PR title, description (up to 8,000 characters), diff,
+and up to 100 commit subjects to Anthropic to generate the lesson. The resulting
+comment is posted to the same PR and is visible to people who can access it.
+Cloudflare processes webhook payloads and queue messages. Install the App only
+on repositories whose content you intend to process through these services.
+
+LangSmith tracing is **off by default**. When enabled, traces can include model
+inputs and outputs, including source code and PR context. Trace metadata and
+failure logs identify the repository and PR number. Review your providers'
+retention and access settings before using the App with private code.
+
+To opt in after reviewing that data flow:
+
+1. Set your own key with `pnpm wrangler secret put LANGSMITH_API_KEY -c wrangler.consumer.toml`.
+2. Set `LANGSMITH_TRACING = "true"` in `wrangler.consumer.toml` for deployment,
+   or `LANGSMITH_TRACING="true"` in `.dev.vars` for local development.
+3. Deploy manually when ready; editing configuration does not change a running Worker.
+
+The tracing project is `literate-reviews`, with endpoint
+`https://api.smith.langchain.com`. `LANGCHAIN_CALLBACKS_BACKGROUND=false`
+lets trace callbacks finish before the Worker invocation ends.
 
 ## Deploy manually when ready
 
@@ -116,9 +172,6 @@ Use `pnpm run deploy`, since `pnpm deploy` is pnpm's unrelated built-in command.
 Individual scripts are `pnpm run deploy:receiver` and `pnpm run deploy:consumer`.
 Set the App webhook URL to the resulting
 `literate-reviews-webhook.<YOUR_SUBDOMAIN>.workers.dev` URL.
-
-For local development, use `pnpm dev:receiver` and `pnpm dev:consumer`, with
-local bindings/secrets configured for the intended test environment.
 
 ## CI and end-to-end validation
 
@@ -136,3 +189,7 @@ do not establish that the external integrations work.
 pnpm wrangler tail literate-reviews-webhook
 pnpm wrangler tail literate-reviews-worker
 ```
+
+## License
+
+[MIT](LICENSE). Third-party dependencies retain their own licenses.
