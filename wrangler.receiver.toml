@@ -5,4 +5,4 @@ compatibility_flags = ["nodejs_compat"]
 
 [[queues.producers]]
 binding = "REVIEWS"
-queue = "literate-reviews-reviews"
+queue = "literate-reviews"
